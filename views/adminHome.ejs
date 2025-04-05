@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Artículo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .upload-section {
+            margin-bottom: 2rem;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .instructions {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 2rem;
+        }
+        .instructions ul {
+            margin-left: 1.5rem;
+        }
+        .preview-section {
+            display: none;
+            margin-top: 2rem;
+            border-top: 1px solid #eee;
+            padding-top: 2rem;
+        }
+        .preview-content {
+            border: 1px solid #ddd;
+            padding: 1.5rem;
+            min-height: 200px;
+            background: white;
+            border-radius: 4px;
+        }
+        .confirmation-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .confirmation-buttons button {
+            flex: 1;
+        }
+        #confirm-btn {
+            background-color: #2ecc71;
+        }
+        #confirm-btn:hover {
+            background-color: #27ae60;
+        }
+        #cancel-btn {
+            background-color: #e74c3c;
+        }
+        #cancel-btn:hover {
+            background-color: #c0392b;
+        }
+        .file-info {
+            margin: 1rem 0;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .form-control {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: 'Poppins', sans-serif;
+    }
+
+    select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 1em;
+    }
+
+    input[type="number"] {
+    -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+    }
+
+/* Estilo para vista previa de imagen */
+    .image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    margin: 1rem 0;
+    display: none;
+    }
+    </style>
+</head>
+<body>
+    <%- include('partials/header') %>
+    
+    <main class="container">
+        <h1>Subir Nuevo Artículo</h1>
+
+        <div class="upload-section">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="text" id="title" name="title" placeholder="Título del artículo" required>
+                
+                <select id="category" name="category" class="form-control" required>
+                    <option value="General">General</option>
+                    <option value="Tecnología">Tecnología</option>
+                    <option value="Ciencia">Ciencia</option>
+                    <option value="Cultura">Cultura</option>
+                    <option value="Salud">Salud</option>
+                    <option value="Deportes">Deportes</option>
+                </select>
+                
+                <input type="number" id="reading_time" name="reading_time" 
+                       placeholder="Tiempo de lectura (minutos)" min="1" max="60">
+                
+                <input type="file" id="image" name="image" accept="image/*" 
+                       title="Imagen destacada (opcional)">
+                
+                <input type="file" id="fileInput" name="article" accept=".doc,.docx" required>
+                <button type="button" id="preview-btn">Previsualizar Artículo</button>
+            </form>
+        </div>
+
+        <div class="instructions">
+            <h3>Instrucciones para subir archivos:</h3>
+            <ul>
+                <li>Abra el documento en Microsoft Word</li>
+                <li>Haga clic en "Archivo" > "Guardar como"</li>
+                <li>Seleccione "Documento de Word (*.docx)" como tipo de archivo</li>
+                <li>Guarde el documento y súbalo al sistema</li>
+            </ul>
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <h2>Previsualización</h2>
+            <div class="file-info" id="fileInfo"></div>
+            <div class="preview-content" id="previewContent"></div>
+            <div class="confirmation-buttons">
+                <button type="button" id="confirm-btn">Confirmar Publicación</button>
+                <button type="button" id="cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const previewBtn = document.getElementById('preview-btn');
+            const confirmBtn = document.getElementById('confirm-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const fileInput = document.getElementById('fileInput');
+            const titleInput = document.getElementById('title');
+            const previewSection = document.getElementById('previewSection');
+            const previewContent = document.getElementById('previewContent');
+            const fileInfo = document.getElementById('fileInfo');
+            
+            let tempFilePath = '';
+
+            // Previsualizar artículo
+            previewBtn.addEventListener('click', async function() {
+                if (!fileInput.files.length) {
+                    alert('Por favor seleccione un archivo');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('article', fileInput.files[0]);
+                formData.append('title', titleInput.value);
+
+                try {
+                    const response = await fetch('/upload-preview', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        tempFilePath = data.tempPath;
+                        previewContent.innerHTML = data.htmlContent;
+                        fileInfo.textContent = `Archivo: ${data.fileName} | Tamaño: ${(fileInput.files[0].size / 1024).toFixed(2)} KB`;
+                        previewSection.style.display = 'block';
+                        window.scrollTo({
+                            top: previewSection.offsetTop,
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        alert(`Error: ${data.message}`);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al subir el archivo');
+                }
+            });
+
+            // Confirmar publicación
+            confirmBtn.addEventListener('click', async function() {
+    if (!tempFilePath) {
+        alert('No hay archivo para confirmar');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('tempPath', tempFilePath);
+    formData.append('title', titleInput.value);
+    formData.append('category', document.getElementById('category').value);
+    formData.append('reading_time', document.getElementById('reading_time').value);
+    
+    // Agregar la imagen si existe
+    const imageInput = document.getElementById('image');
+    if (imageInput.files.length > 0) {
+        formData.append('image', imageInput.files[0]);
+    }
+
+    try {
+        const response = await fetch('/confirm-upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Artículo publicado con éxito!');
+            resetForm();
+        } else {
+            alert(`Error: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al confirmar la publicación');
+    }
+});
+
+            // Cancelar publicación
+            cancelBtn.addEventListener('click', async function() {
+                if (!tempFilePath) {
+                    previewSection.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/cancel-upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            tempPath: tempFilePath
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        alert('Subida cancelada. El archivo temporal ha sido eliminado.');
+                        resetForm();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al cancelar la publicación');
+                }
+            });
+
+            const imageInput = document.getElementById('image');
+        const imagePreview = document.createElement('img');
+        imagePreview.className = 'image-preview';
+        imageInput.parentNode.insertBefore(imagePreview, imageInput.nextSibling);
+
+        imageInput.addEventListener('change', function() {
+         if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+            imagePreview.src = e.target.result;
+            imagePreview.style.display = 'block';
+        }
+         reader.readAsDataURL(this.files[0]);
+    } else {
+        imagePreview.style.display = 'none';
+    }
+});
+
+    function resetForm() {
+        document.getElementById('uploadForm').reset();
+        previewContent.innerHTML = '';
+        fileInfo.textContent = '';
+        previewSection.style.display = 'none';
+        
+    }
+        });
+    </script>
+</body>
+</html>

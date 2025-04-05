@@ -1,0 +1,160 @@
+/* Estilos base */
+.page-title {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 2.5rem;
+}
+
+.articles-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    width: 100%; /* Asegura ancho completo */
+}
+
+/* Grid específica - AÑADIDO */
+.articles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+    width: 100%;
+}
+
+/* Tarjeta de artículo */
+.article-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.article-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Artículos destacados */
+.featured-article {
+    border-left: 4px solid #f1c40f;
+    background-color: #fffdf6;
+}
+
+/* Artículos ocultos */
+.hidden-article {
+    opacity: 0.8;
+    background-color: #f9f9f9;
+}
+
+/* Encabezado de artículo */
+.article-header {
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.article-title {
+    color: #3498db;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+    line-height: 1.4;
+}
+
+/* Badges */
+.featured-badge,
+.hidden-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.featured-badge {
+    background-color: #f1c40f;
+    color: #2c3e50;
+}
+
+.hidden-badge {
+    background-color: #95a5a6;
+    color: white;
+}
+
+/* Meta información */
+.article-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Acciones */
+.article-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.read-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.read-btn:hover {
+    background-color: #2980b9;
+}
+
+.edit-btn {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #27ae60;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .articles-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .article-actions {
+        flex-direction: column;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

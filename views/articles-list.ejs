@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/articles-list.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="articles-container">
+        <h1 class="page-title"><%= title %></h1>
+        
+        <div class="articles-grid">
+            <% articles.forEach(article => { %>
+                <article class="article-card <%= article.oculto ? 'hidden-article' : '' %> <%= article.destacado ? 'featured-article' : '' %>">
+                    <div class="article-header">
+                        <% if(article.destacado) { %>
+                            <span class="featured-badge">⭐ Destacado</span>
+                        <% } %>
+                        <% if(article.oculto) { %>
+                            <span class="hidden-badge">👁️‍🗨️ Oculto</span>
+                        <% } %>
+                        <h2 class="article-title"><%= article.title %></h2>
+                    </div>
+                    
+                    <div class="article-meta">
+                        <span class="meta-item">📅 <%= new Date(article.created_at).toLocaleDateString() %></span>
+                        <span class="meta-item">👁️ <%= article.vistas || 0 %> vistas</span>
+                        <span class="meta-item">❤️ <%= article.likes || 0 %> likes</span>
+                    </div>
+                    
+                    <div class="article-actions">
+                        <a href="/article/<%= article.id %>" class="action-btn read-btn">Leer artículo</a>
+                        <% if(user && user.esAdmin) { %>
+                            <a href="/admin/edit-article/<%= article.id %>" class="action-btn edit-btn">✏️ Editar</a>
+                        <% } %>
+                    </div>
+                </article>
+            <% }); %>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

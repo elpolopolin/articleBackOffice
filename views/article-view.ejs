@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/article.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <%- include('partials/header') %>
+    <div class="container">
+        <article>
+            <header>
+                <h1><%= title %></h1>
+                <div class="article-meta">
+                    <span class="date">📅 Publicado el: <%= new Date(createdAt).toLocaleDateString() %></span>
+                    <span class="views">👁️ <%= vistas || 0 %> vistas</span>
+                    <span class="likes">❤️ <%= likes || 0 %> likes</span>
+                </div>
+
+                <div class="action-buttons">
+                    <!-- Botón de Destacar -->
+                    <form method="POST" action="/admin/toggle-destacado/<%= id %>" class="inline-form">
+                        <button type="submit" class="feature-btn <%= destacado ? 'featured' : '' %>">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="<%= destacado ? 'gold' : 'currentColor' %>" viewBox="0 0 16 16">
+                                <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
+                            </svg>
+                            <%= destacado ? 'Destacado' : 'Destacar' %>
+                        </button>
+                    </form>
+                    
+
+                     <!-- Botón de Ocultar -->
+                     <form method="POST" action="/admin/toggle-oculto/<%= id %>" class="inline-form">
+                        <button type="submit" class="hide-btn <%= oculto ? 'hidden' : '' %>">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                            </svg>
+                            <%= oculto ? 'Oculto' : 'Ocultar' %>
+                        </button>
+                    </form> 
+
+                    <!-- Botón de Descarga -->
+                    <a href="<%= downloadPath %>" download="<%= originalFileName %>" class="download-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        Descargar
+                    </a>
+
+
+                    <!-- Botón de Eliminar -->
+                    <form id="deleteForm" method="POST" action="/admin/delete-article/<%= id %>" class="inline-form">
+                        <button type="submit" class="delete-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            Eliminar
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <div class="article-content">
+                <%- content %>
+            </div>
+        </article>
+    </div>
+
+    <footer>
+        <%- include('partials/footer') %>
+    </footer>
+
+    <script>
+        document.getElementById('deleteForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (confirm("¿Estás seguro de que deseas eliminar este artículo? Esta acción no se puede deshacer.")) {
+                this.submit();
+            }
+        });
+
+        document.querySelectorAll('.hide-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (!confirm(`¿Estás seguro de que deseas ${this.classList.contains('hidden') ? 'mostrar' : 'ocultar'} este artículo?`)) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/article.css">
+</head>
+<body>
+   
+    <header class="navbar">
+        <div class="navbar-left">
+            <span class="welcome-message">Welcome, <%= user.username %></span>
+        </div>
+        <div class="navbar-right">
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </header>
+    
+    <main class="">
+        <article class="container">
+            <header class="article-header">
+                <h1 class="article-title"><%= article.title %></h1>
+                <div class="article-meta">
+                    <time datetime="<%= article.createdAt %>">
+                        <%= new Date(article.createdAt).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        }) %>
+                    </time>
+                </div>
+            </header>
+
+            <div class="article-body">
+                <%- article.content %>
+            </div>
+
+            <% if (article.imageUrls && article.imageUrls.length > 0) { %>
+                <div class="article-gallery">
+                    <% article.imageUrls.forEach(imageUrl => { %>
+                        <figure class="article-figure">
+                            <img src="<%= imageUrl %>" alt="Article image" loading="lazy">
+                        </figure>
+                    <% }) %>
+                </div>
+            <% } %>
+        </article>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear Artículo</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+ 
+</head>
+<body>
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="username">Bienvenido, <strong> <%= user.username %> </strong></div>
+    <button class="logout-button" onclick="window.location.href='/logout'">Cerrar Sesión</button>
+  </div>
+
+  <!-- Editor Container -->
+  <div class="editor-container">
+    <!-- Quill Editor -->
+    <div id="editor"></div>
+
+    <!-- Image Size Form -->
+    <div class="image-size-form" id="imageSizeForm">
+      <input type="number" id="imageWidth" placeholder="Ancho (px)">
+      <input type="number" id="imageHeight" placeholder="Alto (px)">
+      <button onclick="applyImageSize()">Aplicar</button>
+    </div>
+
+    <!-- Save Button -->
+    <button class="save-button" onclick="saveArticle()">Guardar Artículo</button>
+  </div>
+
+  <!-- Quill JS -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script>
+    // Initialize Quill Editor
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, 4, 5, 6, false] }], // Added more header sizes
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ color: [] }, { background: [] }],
+          [{ align: [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      },
+      placeholder: 'Escribe tu artículo aquí...'
+    });
+
+    // Image Size Form Logic
+    let selectedImage = null;
+
+    quill.on('editor-change', (eventName, ...args) => {
+      if (eventName === 'selection-change') {
+        const range = quill.getSelection();
+        if (range && range.length === 0) {
+          const [node] = quill.getLeaf(range.index);
+          if (node && node.tagName === 'IMG') {
+            selectedImage = node;
+            document.getElementById('imageSizeForm').style.display = 'block';
+          } else {
+            selectedImage = null;
+            document.getElementById('imageSizeForm').style.display = 'none';
+          }
+        }
+      }
+    });
+
+    // Apply Image Size
+    function applyImageSize() {
+      if (selectedImage) {
+        const width = document.getElementById('imageWidth').value;
+        const height = document.getElementById('imageHeight').value;
+        selectedImage.style.width = width ? `${width}px` : '';
+        selectedImage.style.height = height ? `${height}px` : '';
+      }
+    }
+
+    // Save Article Function
+    function saveArticle() {
+      const content = quill.root.innerHTML;
+      console.log('Artículo guardado:', content);
+      // Send content to the server (you can use fetch or axios)
+      // Example:
+      // fetch('/save-article', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ content })
+      // });
+      alert('Artículo guardado correctamente.');
+    }
+  </script>
+</body>
+</html>

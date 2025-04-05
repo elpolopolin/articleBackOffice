@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        h1 { color: #d9534f; }
+    </style>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    
+    <h1>Error</h1>
+    <p><%= typeof message !== 'undefined' ? message : 'Ocurrió un error' %></p>
+    <% if (typeof error !== 'undefined' && error) { %>
+        <% if (process.env.NODE_ENV === 'development') { %>
+            <pre><%= error.stack || error %></pre>
+        <% } %>
+    <% } %>
+    <a href="/">Volver al inicio</a>
+</body>
+</html>
