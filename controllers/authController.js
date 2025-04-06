@@ -1,179 +1,302 @@
 import dotenv from "dotenv";
-import { pool } from "../config/connection.js";
+import { pool, pool2 } from "../config/connection.js";
 import { registerService } from "../services/authServices.js";
 import { loginService, adminLoginService, registerAdminService } from "../services/authServices.js";
 import { sendOTOPVerificationEmail } from "../utils/emailUtils.js";
 import { getUsersOTPVerification, deleteUserOTPVerification, deleteUserbyId, updateUserVerified } from "../utils/helpers.js";
 import bcryptjs from "bcryptjs";
 import { getUserById } from "../utils/helpers.js";
+import rateLimit from 'express-rate-limit';
+import validator from 'validator';
 
 dotenv.config();
 
-async function register(req, res) {
-  try {
-    const { status, nuevoUsuario, message } = await registerService(req.body);
-
-    if (status === "Error") {
-      return res.status(400).send({ status, message });
+// Configuración de rate limiting para protección contra fuerza bruta
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // límite de 100 peticiones por IP
+    message: {
+        status: "Error",
+        message: "Demasiadas peticiones desde esta IP. Inténtalo de nuevo más tarde."
     }
-    const insertQuery = `INSERT INTO usuarios (username, password, email, phone) VALUES (?, ?, ?, ?)`;
-    pool.query(insertQuery, [nuevoUsuario.username, nuevoUsuario.password, nuevoUsuario.email, nuevoUsuario.phone], function (err, result) {
-      if (err) {
-        return res.status(500).send({ status: "Error", message: "Error al agregar el nuevo usuario" });
-      }
-      const nuevoUsuarioId = result.insertId;
-      console.log("nuevo usuario id" + nuevoUsuarioId)
-      sendOTOPVerificationEmail(nuevoUsuarioId, nuevoUsuario.email)
-        .then((response) => {
-          console.log(response); 
-        })
-        .catch((error) => {
-          console.error(error); 
+});
+
+// Función para validar y sanitizar inputs
+const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return '';
+    return validator.escape(validator.trim(input));
+};
+
+async function register(req, res) {
+    try {
+        // Sanitizar inputs
+        const sanitizedBody = {
+            username: sanitizeInput(req.body.username),
+            email: validator.normalizeEmail(sanitizeInput(req.body.email)),
+            phone: sanitizeInput(req.body.phone),
+            password: req.body.password // No sanitizar, se hasheará
+        };
+
+        const { status, nuevoUsuario, message } = await registerService(sanitizedBody);
+
+        if (status === "Error") {
+            return res.status(400).json({ status, message });
+        }
+
+        // Usar pool2 para consultas preparadas con async/await
+        const insertQuery = `INSERT INTO usuarios (username, password, email, phone) VALUES (?, ?, ?, ?)`;
+        const [result] = await pool2.execute(insertQuery, [
+            nuevoUsuario.username,
+            nuevoUsuario.password,
+            nuevoUsuario.email,
+            nuevoUsuario.phone
+        ]);
+
+        const nuevoUsuarioId = result.insertId;
+        
+        // Enviar OTP de forma segura
+        await sendOTOPVerificationEmail(nuevoUsuarioId, nuevoUsuario.email)
+            .catch(error => console.error("Error sending OTP email:", error));
+
+        return res.status(201).json({ 
+            status: "ok", 
+            message: `Usuario ${nuevoUsuario.username} agregado`, 
+            redirect: "/" 
         });
 
-      return res.status(201).send({ status: "ok", message: `Usuario ${nuevoUsuario.username} agregado`, redirect: "/" });
-    });
-  } catch (error) {
-    return res.status(500).send({ status: "Error", message: "Error en el registro del usuario", error: error.message });
-  }
-}
-
-{/* dejar inutilizada luego de registrar admins*/}
-async function registerAdmin(req, res) {
-  try {
-    const { status, nuevoUsuario, message } = await registerAdminService(req.body);
-
-    if (status === "Error") {
-      return res.status(400).send({ status, message });
+    } catch (error) {
+        console.error("Error en el registro:", error);
+        return res.status(500).json({ 
+            status: "Error", 
+            message: "Error en el registro del usuario",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
     }
-    const insertQuery = `INSERT INTO admins (username, password, email,role, phone) VALUES (?, ?, ?, ?, ?)`;
-    pool.query(insertQuery, [nuevoUsuario.username, nuevoUsuario.password, nuevoUsuario.email,  nuevoUsuario.role, nuevoUsuario.phone], function (err, result) {
-      if (err) {
-        return res.status(500).send({ status: "Error", message: "Error al agregar el nuevo usuario" });
-      }
-      const nuevoUsuarioId = result.insertId;
-      console.log("nuevo usuario id" + nuevoUsuarioId)
-      /*sendOTOPVerificationEmail(nuevoUsuarioId, nuevoUsuario.email) (solo se aplica en usuarios comunes, ademas fijarse que crea el usuario antes de mandar el email, de todas formas si no esta verificado el user no tendra ciertos accesos pero esto podria generar mails falsos)
-        .then((response) => {
-          console.log(response); 
-        })
-        .catch((error) => {
-          console.error(error); 
-        }); */
-
-      return res.status(201).send({ status: "ok", message: `Usuario ${nuevoUsuario.username} agregado`, redirect: "/" });
-    });
-  } catch (error) {
-    return res.status(500).send({ status: "Error", message: "Error en el registro del usuario", error: error.message });
-  }
 }
-{/* dejar inutilizada luego de registrar admins*/}
+
+{/* eliminar kyego */}
+async function registerAdmin(req, res) {
+    try {
+     
+        const sanitizedBody = {
+            username: sanitizeInput(req.body.username),
+            email: validator.normalizeEmail(sanitizeInput(req.body.email)),
+            phone: sanitizeInput(req.body.phone),
+            role: sanitizeInput(req.body.role) || 1,
+            password: req.body.password
+        };
+
+        const { status, nuevoUsuario, message } = await registerAdminService(sanitizedBody);
+
+        if (status === "Error") {
+            return res.status(400).json({ status, message });
+        }
+
+        const insertQuery = `INSERT INTO admins (username, password, email, role, phone) VALUES (?, ?, ?, ?, ?)`;
+        const [result] = await pool2.execute(insertQuery, [
+            nuevoUsuario.username,
+            nuevoUsuario.password,
+            nuevoUsuario.email,
+            nuevoUsuario.role,
+            nuevoUsuario.phone
+        ]);
+
+        return res.status(201).json({ 
+            status: "ok", 
+            message: `Admin ${nuevoUsuario.username} agregado`,
+            redirect: "/admin/home"
+        });
+
+    } catch (error) {
+        console.error("Error en registro admin:", error);
+        return res.status(500).json({ 
+            status: "Error", 
+            message: "Error en el registro del admin",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+}
+
+{/**/ }
 
 async function verifyOTP(req, res) {
-  
-  try {
-    const OTPusers = await getUsersOTPVerification();
-    const { userId, otp } = req.body;
-    if (!userId || !otp) {
-      return res.status(400).send({ status: "Error", message: "Empty otp details are not allowed" });
-    }
-    
-    const userOTPVerificationRecord = OTPusers.find(userOtp => userOtp.userId == userId);
-    //console.log(userId,otp,userOTPVerificationRecord)
-    if (!userOTPVerificationRecord) {
-      return res.status(400).send({ status: "Error", message: "User not found or with no otp verification in progress" });
-    }
-    const expiresAt = userOTPVerificationRecord.expiresAt;
-    const hashedOtp = userOTPVerificationRecord.otp;
-    if (expiresAt < Date.now()) {
-      await deleteUserOTPVerification(userId);
-      return res.status(400).send({ status: "Error", message: "Code has expired. Please sign up again" });
-    }
-    //console.log(otp.toString(), hashedOtp)
-    const validOTP = await bcryptjs.compare(otp.toString(), hashedOtp);
-    console.log("validotp",validOTP);
-    if (!validOTP) {
-      return res.status(400).send({ status: "Error", message: "Invalid code passed. Check your inbox." });
-    }
-    else{
-    await updateUserVerified(userId);
-    await deleteUserOTPVerification(userId);
-    return res.status(200).send({ status: "VERIFIED", message: `User ${userId} email was verified successfully` });
-  }
-    
-  } catch (error) {
-    return res.status(500).send({
-      status: "FAILEDD",
-      message: error.message,
-    });
-  }
-}
-async function resendOTPVerificationCode(req, res) {
-  try {
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).send({ status: "Error", message: "User ID is required" });
-    }
-
-    const user = await getUserById(userId);
-    console.log("User data:", user[0].email);
-    if (!user) {
-      return res.status(404).send({ status: "Error", message: "User not found" });
-    }
-
-   await deleteUserOTPVerification(userId);
-
-    await sendOTOPVerificationEmail(userId, user[0].email);
-
-    console.log("OTP email sent successfully");
-    
-    return res.status(200).send({ status: "Success", message: "OTP email sent successfully" });
-  } catch (error) {
-    console.error("Failed to resend OTP:", error);
-
-    return res.status(500).send({
-      status: "Failed",
-      message: error.message || "An unexpected error occurred",
-    });
-  }
-}
-  
-  async function login(req, res) {
-    try { 
-      const { email, password } = req.body;
-      const { status, message, token, user } = await loginService(email, password);
-      if (status === "Error") {
-        return res.status(400).send({ status, message });
-      }
-      return res.status(200).send({ status, message, token, user });
-    } catch (error) {
-      console.error("Error en el inicio de sesión:", error);
-      return res.status(500).send({ status: "Error", message: "Error en el inicio de sesión", error: error.message });
-    }
-  }
-  async function adminLogin(req, res) {
     try {
-        const { username, password } = req.body;
-       // console.log(username, password);
-        console.log("admin login",username, password );
-        const { status, message, token, admin } = await adminLoginService(username, password);
-        if (status === "Error") {
-            return res.status(400).send({ status, message });
+        // Validar inputs
+        const userId = parseInt(req.body.userId) || 0;
+        const otp = sanitizeInput(req.body.otp);
+
+        if (!userId || !otp) {
+            return res.status(400).json({ 
+                status: "Error", 
+                message: "Datos OTP incompletos" 
+            });
         }
-        res.cookie('token', token, { httpOnly: true, maxAge: 1 * 60 * 60 * 1000 }); // Duración de 3 horas
-        return res.redirect("/admin/home" );
+
+        const OTPusers = await getUsersOTPVerification();
+        const userOTPVerificationRecord = OTPusers.find(userOtp => userOtp.userId == userId);
+
+        if (!userOTPVerificationRecord) {
+            return res.status(400).json({ 
+                status: "Error", 
+                message: "Usuario no encontrado o sin verificación OTP en progreso" 
+            });
+        }
+
+        // Verificar expiración
+        if (new Date(userOTPVerificationRecord.expiresAt) < new Date()) {
+            await deleteUserOTPVerification(userId);
+            return res.status(400).json({ 
+                status: "Error", 
+                message: "Código expirado. Por favor regístrese nuevamente" 
+            });
+        }
+
+        // Comparar OTP de forma segura
+        const validOTP = await bcryptjs.compare(otp, userOTPVerificationRecord.otp);
+        
+        if (!validOTP) {
+            return res.status(400).json({ 
+                status: "Error", 
+                message: "Código inválido. Verifique su correo." 
+            });
+        }
+
+        // Actualizar usuario como verificado
+        await updateUserVerified(userId);
+        await deleteUserOTPVerification(userId);
+        
+        return res.status(200).json({ 
+            status: "VERIFIED", 
+            message: `Usuario ${userId} verificado exitosamente` 
+        });
+
     } catch (error) {
-        console.error("Error en el inicio de sesión de administrador:", error);
-        return res.status(500).send({ status: "Error", message: "Error en el inicio de sesión de administrador", error: error.message });
+        console.error("Error en verificación OTP:", error);
+        return res.status(500).json({
+            status: "FAILED",
+            message: "Error en la verificación OTP",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
     }
 }
 
-  export const methods =  {
-     register,
-     login,
-     verifyOTP,
-     resendOTPVerificationCode,
-     adminLogin,
-     registerAdmin,
-     }
+async function resendOTPVerificationCode(req, res) {
+    try {
+        const userId = parseInt(req.body.userId) || 0;
+
+        if (!userId) {
+            return res.status(400).json({ 
+                status: "Error", 
+                message: "Se requiere ID de usuario" 
+            });
+        }
+
+        const [user] = await pool2.execute('SELECT email FROM usuarios WHERE id = ?', [userId]);
+        
+        if (!user || user.length === 0) {
+            return res.status(404).json({ 
+                status: "Error", 
+                message: "Usuario no encontrado" 
+            });
+        }
+
+        await deleteUserOTPVerification(userId);
+        await sendOTOPVerificationEmail(userId, user[0].email);
+
+        return res.status(200).json({ 
+            status: "Success", 
+            message: "Código OTP reenviado exitosamente" 
+        });
+
+    } catch (error) {
+        console.error("Error al reenviar OTP:", error);
+        return res.status(500).json({
+            status: "Failed",
+            message: "Error al reenviar el código OTP",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+}
+
+async function login(req, res) {
+    try { 
+        // Sanitizar inputs
+        const email = validator.normalizeEmail(sanitizeInput(req.body.email));
+        const password = req.body.password; // No sanitizar, se comparará con hash
+
+        const { status, message, token, user } = await loginService(email, password);
+        
+        if (status === "Error") {
+            return res.status(400).json({ status, message });
+        }
+
+        // Configurar cookie segura
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000 // 1 día
+        });
+
+        return res.status(200).json({ 
+            status, 
+            message, 
+            token, 
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email
+                // No enviar datos sensibles
+            } 
+        });
+
+    } catch (error) {
+        console.error("Error en el inicio de sesión:", error);
+        return res.status(500).json({ 
+            status: "Error", 
+            message: "Error en el inicio de sesión",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+}
+
+async function adminLogin(req, res) {
+    try {
+        const username = sanitizeInput(req.body.username);
+        const password = req.body.password; // No sanitizar, se comparará con hash
+
+        const { status, message, token, admin } = await adminLoginService(username, password);
+        
+        if (status === "Error") {
+            return res.status(400).json({ status, message });
+        }
+
+        // Configurar cookie segura para admin
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 3 * 60 * 60 * 1000 // 3 horas
+        });
+
+        return res.redirect("/admin/home");
+
+    } catch (error) {
+        console.error("Error en inicio de sesión admin:", error);
+        return res.status(500).json({ 
+            status: "Error", 
+            message: "Error en el inicio de sesión de administrador",
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+}
+
+export const methods = {
+    register,
+    login,
+    verifyOTP,
+    resendOTPVerificationCode,
+    adminLogin,
+    registerAdmin,
+    authLimiter 
+};

@@ -8,11 +8,24 @@ import { pool, pool2 } from "../config/connection.js";
 import mammoth from 'mammoth';
 import fs from 'fs';
 import { promisify } from 'util';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = Router();
 const renameAsync = promisify(fs.rename);
+
+// 1. Rate Limiting para protección contra fuerza bruta/DDoS
+const adminLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // límite de 100 peticiones por ventana
+    message: {
+        success: false,
+        message: "Demasiadas peticiones desde esta IP. Inténtalo de nuevo más tarde.",
+        code: "ERR_RATE_LIMIT"
+    }
+});
 
 // Configuración de Multer para archivos temporales
 const tempStorage = multer.diskStorage({
@@ -80,16 +93,21 @@ const uploadImage = multer({
 
 //fin image multer
 
+// Función segura para conversión de documentos
 async function convertDocToHtml(filePath) {
     try {
         const result = await mammoth.convertToHtml({ path: filePath });
-        return result.value;
+        // Sanitizar el HTML resultante para prevenir XSS
+        const sanitizedHtml = result.value
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/javascript:/gi, '')
+            .replace(/on\w+="[^"]*"/gi, '');
+        return sanitizedHtml;
     } catch (error) {
         console.error('Error converting DOCX to HTML:', error);
         throw error;
     }
 }
-
 // Ruta para subir y previsualizar
 router.post('/upload-preview', verificarAdmin, (req, res) => {
     uploadTemp(req, res, async (err) => {
@@ -380,39 +398,7 @@ router.get('/admin/articles', verificarAdmin, async (req, res) => {
     }
 });
 
-/*
-router.get('/articleee/:id', async (req, res) => {
-    try {
-        // Consulta segura que funciona con cualquier driver
-        const queryResult = await pool2.query('SELECT * FROM articles WHERE id = ?', [req.params.id]);
-        
-        // Extracción segura de resultados
-        let rows;
-        if (Array.isArray(queryResult) && Array.isArray(queryResult[0])) {
-            rows = queryResult[0]; // Para mysql2/promise
-        } else if (Array.isArray(queryResult)) {
-            rows = queryResult; // Para otros drivers
-        } else {
-            rows = []; // Por si acaso
-        }
-        
-        if (rows.length === 0) {
-            return res.status(404).render('404', {
-                message: 'Artículo no encontrado'
-            });
-        }
-        
-        const article = rows[0];
-        res.send(article);
-    } catch (error) {
-        console.error('Error al obtener artículo:', error);
-        res.status(500).render('error', {
-            message: 'Error al cargar el artículo',
-            error: process.env.NODE_ENV === 'development' ? error : null
-        });
-    }
-});
-*/
+
 
 //manejo de errores
 //
