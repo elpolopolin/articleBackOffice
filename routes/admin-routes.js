@@ -4,7 +4,7 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { verificarAdmin } from "../midlewares/auth.js";
-import { pool, pool2 } from "../config/connection.js";
+import { pool2 } from "../config/connection.js";
 import mammoth from 'mammoth';
 import fs from 'fs';
 import { promisify } from 'util';
@@ -297,14 +297,6 @@ router.get("/admin/home", verificarAdmin, async (req, res) => {
     }
 });
 
-router.get("/articles", verificarAdmin, async (req, res) => {
-    try {
-        const [articles] = await pool2.query('SELECT * FROM articles ORDER BY created_at DESC');
-        res.send({articles});
-    } catch (error) {
-        console.error('Error fetching articles:', error);
-    }
-})
 
 router.get("/logout", (req, res) => {
     res.clearCookie("token", { httpOnly: true });

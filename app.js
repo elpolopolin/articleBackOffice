@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import { methods } from './controllers/authController.js';
 import { verificarAdmin, verificarTokenJWT } from './midlewares/auth.js';
 import adminroutes from "./routes/admin-routes.js"
+import publicroutes from './routes/public-routes.js';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import path from 'path';
@@ -40,8 +41,12 @@ app.get("/api/verified", verificarTokenJWT, (req, res) => {
 
 //app.get("/api/userData", verificarTokenJWT, userMethods.getUserData);
 
+//public api routes
+app.use('/api', publicroutes);
 //admin routes 
 app.use(adminroutes);
+
+
 
 
 app.listen(PORT, () => {

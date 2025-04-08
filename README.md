@@ -11,3 +11,8 @@ Asegura cookies/JWT con HttpOnly y Secure.
 Bloquea el acceso no autorizado a ngrok (auth básica).
 
 No expongas MySQL directamente a internet.
+
+
+almacenamiento disco, ram, 
+
+color fodno: #4F5E65
