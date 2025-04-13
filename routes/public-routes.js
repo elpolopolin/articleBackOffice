@@ -160,6 +160,95 @@ router.get("/getCategorias", async (req, res) => {
     }
 });
 
+router.get("/articles/:id/related", async (req, res) => {
+    try {
+        const articleId = parseInt(req.params.id);
+        if (!req.params.id || isNaN(articleId) || articleId <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "ID de artículo inválido",
+                code: "INVALID_ID"
+            });
+        }
+
+        // Verificar si el artículo existe
+        const [currentArticle] = await pool2.query(`
+            SELECT category FROM articles WHERE id = ? AND oculto = 0
+        `, [articleId]);
+
+        if (currentArticle.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Artículo no encontrado",
+                code: "ARTICLE_NOT_FOUND"
+            });
+        }
+
+        const category = currentArticle[0].category;
+
+        // Calcular el límite restante
+        const [relatedCount] = await pool2.query(`
+            SELECT COUNT(*) AS count FROM articles
+            WHERE category = ? AND id != ? AND oculto = 0
+        `, [category, articleId]);
+
+        const remainingLimit = 4 - (relatedCount[0]?.count || 0);
+
+        // Consulta principal
+        const [results] = await pool2.query(`
+            WITH related_by_category AS (
+                SELECT 
+                    id, title, description, image, created_at,
+                    category, reading_time, vistas, likes,
+                    1 AS is_same_category
+                FROM articles
+                WHERE category = ?
+                AND id != ?
+                AND oculto = 0
+                ORDER BY destacado DESC, created_at DESC
+                LIMIT 4
+            ),
+            additional_articles AS (
+                SELECT 
+                    id, title, description, image, created_at,
+                    category, reading_time, vistas, likes,
+                    0 AS is_same_category
+                FROM articles
+                WHERE id != ?
+                AND oculto = 0
+                AND id NOT IN (SELECT id FROM related_by_category)
+                ORDER BY created_at DESC
+                LIMIT ?
+            )
+            SELECT * FROM (
+                SELECT * FROM related_by_category
+                UNION ALL
+                SELECT * FROM additional_articles
+            ) AS final_results
+        `, [category, articleId, articleId, remainingLimit]);
+
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.json({ 
+            success: true, 
+            articles: results,
+            meta: { 
+                originalArticleId: articleId,
+                category,
+                count: results.length,
+                hasRelatedFromSameCategory: results.some(a => a.is_same_category === 1)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching related articles:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Error al obtener artículos relacionados",
+            code: "SERVER_ERROR",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // Obtener artículos filtrados por categoría
 router.get("/articles/filter", validateQueryParams, async (req, res) => {
     const { category } = req.query;
